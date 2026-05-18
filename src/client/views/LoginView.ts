@@ -1,6 +1,5 @@
 // ---------------------------------------------------------------------------
-// LoginView — SSO-aware auth screen
-// Reads mycelium_token cookie set by mycelium.social login
+// LoginView — NIP-07 Nostr login (signs in directly on this subdomain)
 // ---------------------------------------------------------------------------
 
 import { Component } from 'inferno';
@@ -11,14 +10,61 @@ import {
   Button, Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter,
 } from 'blazecn';
 import { IconSpinner } from '../icons';
-
-const MAIN_DOMAIN = location.hostname.replace(/^[^.]+\./, '');
+import { login } from '../api';
 
 export class LoginView extends Component<{}, {}> {
-  private handleLogin() {
-    // Redirect to mycelium.social for NIP-07 login
-    // After login, the cookie is set on .mycelium.social and works here too
-    window.location.href = `https://${MAIN_DOMAIN}`;
+  private async handleLogin() {
+    authLoading.value = true;
+    authError.value = '';
+
+    try {
+      // 1. Check for NIP-07 extension
+      const nostr = (window as any).nostr;
+      if (!nostr) {
+        authError.value = 'No Nostr extension found. Install Alby, nos2x, or similar.';
+        authLoading.value = false;
+        return;
+      }
+
+      // 2. Get challenge token from server
+      const tokenRes = await fetch('/api/auth/login-token', { credentials: 'include' });
+      const { token: challenge } = await tokenRes.json();
+
+      // 3. Sign with NIP-07 extension
+      const unsigned = {
+        kind: 27235,
+        created_at: Math.floor(Date.now() / 1000),
+        tags: [],
+        content: challenge,
+      };
+      const event = await nostr.signEvent(unsigned);
+
+      if (!event?.id || !event?.pubkey || !event?.sig) {
+        authError.value = 'Signer returned invalid event';
+        authLoading.value = false;
+        return;
+      }
+
+      // 4. Send signed event to server
+      const loginRes = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify(event),
+      });
+      const data = await loginRes.json();
+
+      if (data.ok) {
+        // Cookie is set by server — just reload to pick it up
+        window.location.reload();
+      } else {
+        authError.value = data.error || 'Login failed';
+        authLoading.value = false;
+      }
+    } catch (e: any) {
+      authError.value = e.message || 'Login failed';
+      authLoading.value = false;
+    }
   }
 
   render() {
@@ -48,17 +94,12 @@ export class LoginView extends Component<{}, {}> {
         },
           createElement(CardHeader, { className: 'text-center space-y-2' },
             createElement('div', { className: 'mx-auto size-14 rounded-2xl bg-primary flex items-center justify-center mb-2' },
-              createElement('span', { className: 'text-2xl font-black text-primary-foreground' }, '🍄'),
+              createElement('span', { className: 'text-2xl' }, '🍄'),
             ),
             createElement(CardTitle, { className: 'text-2xl' }, 'Sporeboard'),
-            createElement(CardDescription, null, 'Sign in with your Mycelium account'),
+            createElement(CardDescription, null, 'Sign in with your Nostr identity'),
           ),
           createElement(CardContent, { className: 'space-y-4' },
-            createElement('p', { className: 'text-sm text-muted-foreground text-center' },
-              'Sporeboard uses your Nostr identity from ',
-              createElement('strong', null, MAIN_DOMAIN),
-              '. Log in once and access all Mycelium services.',
-            ),
             // Error
             S(() => {
               const err = authError.value;
@@ -68,7 +109,7 @@ export class LoginView extends Component<{}, {}> {
               }, err);
             }),
           ),
-          createElement(CardFooter, { className: 'flex flex-col gap-3' },
+          createElement(CardFooter, null,
             S(() =>
               createElement(Button, {
                 className: 'w-full',
@@ -79,18 +120,10 @@ export class LoginView extends Component<{}, {}> {
                 authLoading.value
                   ? createElement('span', { className: 'flex items-center gap-2' },
                       IconSpinner('size-4'),
-                      'Checking session...',
+                      'Signing in...',
                     )
-                  : `Login at ${MAIN_DOMAIN}`,
+                  : '🔑 Login with Nostr',
               ),
-            ),
-            createElement('p', { className: 'text-xs text-muted-foreground text-center' },
-              'Already logged in? ',
-              createElement('a', {
-                href: '#',
-                className: 'text-primary underline',
-                onClick: (e: any) => { e.preventDefault(); location.reload(); },
-              }, 'Refresh this page'),
             ),
           ),
         ),
