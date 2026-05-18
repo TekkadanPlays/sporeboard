@@ -149,10 +149,16 @@ export const isAuthenticated = computed(() => currentUser.value !== null);
 export const authLoading = signal(false);
 export const authError = signal('');
 
-// Persist/restore from localStorage
+// Persist/restore from localStorage or SSO cookie
 const CRED_KEY = 'kb_credentials';
 
+function hasSSOCookie(): boolean {
+  return document.cookie.includes('mycelium_token=');
+}
+
 export function restoreAuth(): boolean {
+  // Check SSO cookie first (set by NIP-07 login on any subdomain)
+  if (hasSSOCookie()) return true;
   try {
     const raw = localStorage.getItem(CRED_KEY);
     if (raw) {
@@ -171,6 +177,9 @@ export function saveAuth(creds: AuthCredentials) {
 
 export function logout() {
   localStorage.removeItem(CRED_KEY);
+  // Clear SSO cookie
+  const domain = location.hostname.replace(/^[^.]+\./, '');
+  document.cookie = `mycelium_token=; domain=.${domain}; path=/; max-age=0`;
   batch(() => {
     authCredentials.value = null;
     currentUser.value = null;
