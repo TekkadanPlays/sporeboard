@@ -14,12 +14,12 @@
   "dependencies": {
     "@preact/signals-core": "^1.8.0",
     "blazecn": "github:TekkadanPlays/blazecn",
-
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "hono": "^4.7.0",
     "inferno": "^8.2.3",
     "inferno-create-element": "^8.2.3",
+    "jose": "^6.2.3",
     "tailwind-merge": "^3.4.0"
   },
   "devDependencies": {
