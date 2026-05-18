@@ -1,8 +1,8 @@
 {
-  "name": "spore",
+  "name": "sporeboard",
   "version": "0.1.0",
   "type": "module",
-  "description": "Spore — a lean, performant microframework: Bun + Hono + InfernoJS + Blazecn + Preact Signals",
+  "description": "Sporeboard — a modern Kanban board frontend built on Spore (Bun + Hono + InfernoJS + Blazecn + Preact Signals)",
   "scripts": {
     "dev": "bun --watch run src/server.ts",
     "dev:css": "bunx @tailwindcss/cli -i src/styles.css -o public/styles.css --watch",
@@ -14,7 +14,7 @@
   "dependencies": {
     "@preact/signals-core": "^1.8.0",
     "blazecn": "github:TekkadanPlays/blazecn",
-    "chart.js": "^4.5.1",
+
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "hono": "^4.7.0",

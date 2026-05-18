@@ -4,14 +4,14 @@ export function html() {
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Spore</title>
+  <title>Kanboard — Modern Kanban Board</title>
+  <meta name="description" content="A fast, modern frontend for Kanboard — drag-and-drop Kanban boards, task management, and project dashboards. Built on the Spore microframework (Bun + Hono + InfernoJS)." />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="/public/styles.css" />
   <script>
     // Restore theme before paint to avoid flash
-    // Must match blazecn theme store keys
     (function() {
       var h = document.documentElement;
       var dark = localStorage.getItem('blazecn_dark_mode');
