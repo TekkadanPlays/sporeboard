@@ -121,9 +121,11 @@ app.get('*', (c) => {
   return c.html(html());
 });
 
+const port = parseInt(process.env.PORT || '3000', 10);
+
 export default {
-  port: 3000,
+  port,
   fetch: app.fetch,
 };
 
-console.log('🍄 Kanboard × Spore on http://localhost:3000');
+console.log(`🍄 Sporeboard on http://localhost:${port}`);
