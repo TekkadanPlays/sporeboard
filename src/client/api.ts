@@ -40,11 +40,11 @@ export async function validateSession(): Promise<boolean> {
     const data = await res.json();
     if (data.ok && data.pubkey) {
       batch(() => {
-        // Set a minimal user object from SSO data
+        // Set user from SSO — show truncated pubkey as name
         currentUser.value = {
           id: 1,
-          username: data.pubkey.slice(0, 8) + '...',
-          name: data.admin ? 'Admin' : 'User',
+          username: data.pubkey.slice(0, 12) + '...',
+          name: data.admin ? '⚡ Admin' : data.pubkey.slice(0, 12) + '...',
           role: data.admin ? 'admin' : 'user',
         } as any;
       });
@@ -64,23 +64,39 @@ export async function fetchDashboard() {
   globalLoading.value = true;
   try {
     const res = await authFetch('/api/dashboard');
+    if (res.status === 503) {
+      // Kanboard not configured — show empty state
+      batch(() => {
+        projects.value = [];
+        overdueTasks.value = [];
+        globalLoading.value = false;
+      });
+      return;
+    }
+    if (res.status === 429) {
+      // Rate limited — just stop, don't retry
+      globalLoading.value = false;
+      return;
+    }
     const data = await res.json();
     if (data.ok) {
       batch(() => {
-        currentUser.value = data.me;
+        if (data.me) currentUser.value = data.me;
         projects.value = data.projects || [];
         overdueTasks.value = data.overdue || [];
         globalLoading.value = false;
       });
     } else {
       batch(() => {
-        globalError.value = data.error;
+        projects.value = [];
+        overdueTasks.value = [];
         globalLoading.value = false;
       });
     }
   } catch (e: any) {
     batch(() => {
-      globalError.value = e.message;
+      projects.value = [];
+      overdueTasks.value = [];
       globalLoading.value = false;
     });
   }
