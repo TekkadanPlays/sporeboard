@@ -1,34 +1,24 @@
 // ---------------------------------------------------------------------------
-// LoginView — glassmorphic auth screen
+// LoginView — SSO-aware auth screen
+// Reads mycelium_token cookie set by mycelium.social login
 // ---------------------------------------------------------------------------
 
 import { Component } from 'inferno';
 import { createElement } from 'inferno-create-element';
 import { authLoading, authError } from '../../signals';
 import { S } from '../bridge';
-import { login } from '../api';
 import {
   Button, Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter,
-  Input, Label, Badge,
 } from 'blazecn';
 import { IconSpinner } from '../icons';
 
-export class LoginView extends Component<{}, {
-  url: string;
-  username: string;
-  token: string;
-}> {
-  state = {
-    url: localStorage.getItem('kb_last_url') || 'http://localhost:8080/jsonrpc.php',
-    username: 'admin',
-    token: '',
-  };
+const MAIN_DOMAIN = location.hostname.replace(/^[^.]+\./, '');
 
-  private async handleLogin() {
-    const { url, username, token } = this.state;
-    if (!url || !username || !token) return;
-    localStorage.setItem('kb_last_url', url);
-    await login(url, username, token);
+export class LoginView extends Component<{}, {}> {
+  private handleLogin() {
+    // Redirect to mycelium.social for NIP-07 login
+    // After login, the cookie is set on .mycelium.social and works here too
+    window.location.href = `https://${MAIN_DOMAIN}`;
   }
 
   render() {
@@ -58,48 +48,16 @@ export class LoginView extends Component<{}, {
         },
           createElement(CardHeader, { className: 'text-center space-y-2' },
             createElement('div', { className: 'mx-auto size-14 rounded-2xl bg-primary flex items-center justify-center mb-2' },
-              createElement('span', { className: 'text-2xl font-black text-primary-foreground' }, 'K'),
+              createElement('span', { className: 'text-2xl font-black text-primary-foreground' }, '🍄'),
             ),
-            createElement(CardTitle, { className: 'text-2xl' }, 'Kanboard'),
-            createElement(CardDescription, null, 'Sign in to your Kanboard instance'),
+            createElement(CardTitle, { className: 'text-2xl' }, 'Sporeboard'),
+            createElement(CardDescription, null, 'Sign in with your Mycelium account'),
           ),
           createElement(CardContent, { className: 'space-y-4' },
-            // Server URL
-            createElement('div', { className: 'space-y-2' },
-              createElement(Label, { htmlFor: 'login-url' }, 'API Endpoint'),
-              createElement(Input, {
-                id: 'login-url',
-                type: 'url',
-                placeholder: 'http://localhost:8080/jsonrpc.php',
-                value: this.state.url,
-                onInput: (e: any) => this.setState({ url: e.target.value }),
-                className: 'bg-background/50',
-              }),
-            ),
-            // Username
-            createElement('div', { className: 'space-y-2' },
-              createElement(Label, { htmlFor: 'login-user' }, 'Username'),
-              createElement(Input, {
-                id: 'login-user',
-                type: 'text',
-                placeholder: 'admin',
-                value: this.state.username,
-                onInput: (e: any) => this.setState({ username: e.target.value }),
-                className: 'bg-background/50',
-              }),
-            ),
-            // API Token
-            createElement('div', { className: 'space-y-2' },
-              createElement(Label, { htmlFor: 'login-token' }, 'API Token'),
-              createElement(Input, {
-                id: 'login-token',
-                type: 'password',
-                placeholder: 'Your API token or password',
-                value: this.state.token,
-                onInput: (e: any) => this.setState({ token: e.target.value }),
-                onKeyDown: (e: any) => { if (e.key === 'Enter') this.handleLogin(); },
-                className: 'bg-background/50',
-              }),
+            createElement('p', { className: 'text-sm text-muted-foreground text-center' },
+              'Sporeboard uses your Nostr identity from ',
+              createElement('strong', null, MAIN_DOMAIN),
+              '. Log in once and access all Mycelium services.',
             ),
             // Error
             S(() => {
@@ -110,7 +68,7 @@ export class LoginView extends Component<{}, {
               }, err);
             }),
           ),
-          createElement(CardFooter, null,
+          createElement(CardFooter, { className: 'flex flex-col gap-3' },
             S(() =>
               createElement(Button, {
                 className: 'w-full',
@@ -121,10 +79,18 @@ export class LoginView extends Component<{}, {
                 authLoading.value
                   ? createElement('span', { className: 'flex items-center gap-2' },
                       IconSpinner('size-4'),
-                      'Connecting...',
+                      'Checking session...',
                     )
-                  : 'Sign in',
+                  : `Login at ${MAIN_DOMAIN}`,
               ),
+            ),
+            createElement('p', { className: 'text-xs text-muted-foreground text-center' },
+              'Already logged in? ',
+              createElement('a', {
+                href: '#',
+                className: 'text-primary underline',
+                onClick: (e: any) => { e.preventDefault(); location.reload(); },
+              }, 'Refresh this page'),
             ),
           ),
         ),

@@ -17,64 +17,37 @@ import {
 // ---------------------------------------------------------------------------
 
 function headers(): Record<string, string> {
-  const creds = authCredentials.value;
-  if (!creds) return { 'Content-Type': 'application/json' };
-  return {
-    'Content-Type': 'application/json',
-    'x-kb-url': creds.url,
-    'x-kb-user': creds.username,
-    'x-kb-token': creds.token,
-  };
+  return { 'Content-Type': 'application/json' };
+}
+
+/** All fetches include credentials so the SSO cookie is sent */
+function authFetch(url: string, init?: RequestInit): Promise<Response> {
+  return fetch(url, { ...init, credentials: 'include', headers: { ...headers(), ...init?.headers } });
 }
 
 // ---------------------------------------------------------------------------
 // Auth
 // ---------------------------------------------------------------------------
 
-export async function login(url: string, username: string, token: string): Promise<boolean> {
-  authLoading.value = true;
-  authError.value = '';
-  try {
-    const res = await fetch('/api/auth/login', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ url, username, token }),
-    });
-    const data = await res.json();
-    if (data.ok) {
-      batch(() => {
-        saveAuth({ url, username, token });
-        currentUser.value = data.user;
-        authLoading.value = false;
-      });
-      navigate('dashboard');
-      return true;
-    } else {
-      batch(() => {
-        authError.value = data.error || 'Login failed';
-        authLoading.value = false;
-      });
-      return false;
-    }
-  } catch (e: any) {
-    batch(() => {
-      authError.value = e.message;
-      authLoading.value = false;
-    });
-    return false;
-  }
+export async function login(_url?: string, _username?: string, _token?: string): Promise<boolean> {
+  // SSO: login happens on mycelium.social. This just validates the cookie.
+  return validateSession();
 }
 
 export async function validateSession(): Promise<boolean> {
   try {
-    const res = await fetch('/api/rpc', {
-      method: 'POST',
-      headers: headers(),
-      body: JSON.stringify({ method: 'getMe' }),
-    });
+    const res = await authFetch('/api/auth/me');
     const data = await res.json();
-    if (data.ok && data.result) {
-      currentUser.value = data.result;
+    if (data.ok && data.pubkey) {
+      batch(() => {
+        // Set a minimal user object from SSO data
+        currentUser.value = {
+          id: 1,
+          username: data.pubkey.slice(0, 8) + '...',
+          name: data.admin ? 'Admin' : 'User',
+          role: data.admin ? 'admin' : 'user',
+        } as any;
+      });
       return true;
     }
     return false;
@@ -90,7 +63,7 @@ export async function validateSession(): Promise<boolean> {
 export async function fetchDashboard() {
   globalLoading.value = true;
   try {
-    const res = await fetch('/api/dashboard', { headers: headers() });
+    const res = await authFetch('/api/dashboard');
     const data = await res.json();
     if (data.ok) {
       batch(() => {
@@ -120,7 +93,7 @@ export async function fetchDashboard() {
 export async function fetchBoard(projectId: number, quiet: boolean = false) {
   if (!quiet) globalLoading.value = true;
   try {
-    const res = await fetch(`/api/board/${projectId}`, { headers: headers() });
+    const res = await authFetch(`/api/board/${projectId}`);
     const data = await res.json();
     if (data.ok) {
       batch(() => {
@@ -152,7 +125,7 @@ export async function fetchBoard(projectId: number, quiet: boolean = false) {
 
 export async function fetchTask(taskId: number) {
   try {
-    const res = await fetch(`/api/task/${taskId}`, { headers: headers() });
+    const res = await authFetch(`/api/task/${taskId}`);
     const data = await res.json();
     if (data.ok) {
       batch(() => {
@@ -171,9 +144,8 @@ export async function fetchTask(taskId: number) {
 // ---------------------------------------------------------------------------
 
 async function rpcCall(method: string, params?: Record<string, any>) {
-  const res = await fetch('/api/rpc', {
+  const res = await authFetch('/api/rpc', {
     method: 'POST',
-    headers: headers(),
     body: JSON.stringify({ method, params }),
   });
   const data = await res.json();
