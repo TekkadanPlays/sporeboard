@@ -22,10 +22,6 @@ import {
 export class DashboardView extends Component<{}, { showCreate: boolean; newName: string }> {
   state = { showCreate: false, newName: '' };
 
-  componentDidMount() {
-    if (!projects.value.length) fetchDashboard();
-  }
-
   private async handleCreate() {
     const name = this.state.newName.trim();
     if (!name) return;

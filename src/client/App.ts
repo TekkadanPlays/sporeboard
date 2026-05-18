@@ -14,7 +14,7 @@ import { S } from './bridge';
 import { validateSession, fetchDashboard, fetchBoard } from './api';
 import {
   ThemeToggle, ThemeSelector, Toaster, toast, initTheme,
-  Button, Badge, Avatar, AvatarFallback,
+  Button, Badge, Avatar, AvatarFallback, AvatarImage,
 } from 'blazecn';
 import {
   IconHome, IconBoard, IconList, IconSettings,
@@ -156,6 +156,9 @@ export class App extends Component<{}, {}> {
                       className: 'flex items-center gap-3 px-2 py-2 mb-1 hover:bg-sidebar-accent/80 rounded-lg cursor-pointer group transition-all duration-200' 
                   },
                       createElement(Avatar, { className: 'size-8 shrink-0 ring-1 ring-border/50 shadow-sm' },
+                          (u as any).avatar_path
+                            ? createElement(AvatarImage, { src: (u as any).avatar_path, alt: u.name || '' })
+                            : null,
                           createElement(AvatarFallback, { className: 'text-xs font-semibold bg-primary/10 text-primary group-hover:bg-primary group-hover:text-primary-foreground transition-colors' },
                               (u.name || u.username || '?').slice(0, 2).toUpperCase(),
                           ),
@@ -229,6 +232,9 @@ export class App extends Component<{}, {}> {
                   const u = currentUser.value;
                   if (!u) return null;
                   return createElement(Avatar, { className: 'size-7' },
+                    (u as any).avatar_path
+                      ? createElement(AvatarImage, { src: (u as any).avatar_path, alt: u.name || '' })
+                      : null,
                     createElement(AvatarFallback, { className: 'text-[10px] bg-primary text-primary-foreground' },
                       (u.name || u.username || '?').slice(0, 2).toUpperCase(),
                     ),

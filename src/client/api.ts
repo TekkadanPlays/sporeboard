@@ -11,6 +11,7 @@ import {
   saveAuth, navigate, batch,
   type AuthCredentials, type KBTask,
 } from '../signals';
+import { fetchNostrProfile } from './nostr-profile';
 
 // ---------------------------------------------------------------------------
 // Headers builder — sends KB credentials on every request
@@ -39,15 +40,31 @@ export async function validateSession(): Promise<boolean> {
     const res = await authFetch('/api/auth/me');
     const data = await res.json();
     if (data.ok && data.pubkey) {
+      const pubkey = data.pubkey;
+      // Set initial user immediately
       batch(() => {
-        // Set user from SSO — show truncated pubkey as name
         currentUser.value = {
           id: 1,
-          username: data.pubkey.slice(0, 12) + '...',
-          name: data.admin ? '⚡ Admin' : data.pubkey.slice(0, 12) + '...',
+          username: pubkey.slice(0, 12) + '...',
+          name: data.admin ? '⚡ Admin' : pubkey.slice(0, 12) + '...',
           role: data.admin ? 'admin' : 'user',
+          avatar_path: '',
         } as any;
       });
+
+      // Enrich with Nostr profile in background (picture, display name)
+      fetchNostrProfile(pubkey).then((profile) => {
+        if (profile) {
+          const displayName = profile.display_name || profile.name || pubkey.slice(0, 12) + '...';
+          currentUser.value = {
+            ...currentUser.value!,
+            name: data.admin ? `⚡ ${displayName}` : displayName,
+            username: profile.nip05 || displayName,
+            avatar_path: profile.picture || '',
+          } as any;
+        }
+      });
+
       return true;
     }
     return false;
